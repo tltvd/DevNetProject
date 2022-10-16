@@ -27,7 +27,6 @@ def threader():
         portscan(worker)
         q.task_done()
 
-
 q = Queue()
 startTime = time.time()
 
