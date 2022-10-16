@@ -22,7 +22,6 @@ def portscan(port):
     except:
         pass
 
-
 def threader():
     while True:
         worker = q.get()
