@@ -22,9 +22,14 @@ def network_connection_check(link):
     else:
         return urllib.request.urlopen(link)
 
+
 class TestMain(unittest.TestCase):
     def test_IfIpIsTrue(self):
         self.assertTrue(socket.inet_aton(t_IP))
+
+    def test_connect(self):
+        self.assertTrue(network_connection_check(target))
+
 
 if __name__ == "__main__":
     unittest.main()
