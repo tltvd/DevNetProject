@@ -27,9 +27,12 @@ class TestMain(unittest.TestCase):
     def test_IfIpIsTrue(self):
         self.assertTrue(socket.inet_aton(t_IP))
 
-    def test_connect(self):
+    def test_connection(self):
         self.assertTrue(network_connection_check(target))
 
+    def test_port_connection(self):
+        for port in portsResults:
+            self.assertTrue(network_connection_check(target+":"+str(port)))
 
 if __name__ == "__main__":
     unittest.main()
