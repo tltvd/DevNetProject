@@ -9,6 +9,8 @@ import struct
 import binascii
 import webbrowser
 
+import portsDict
+
 
 class packetAnalyzer:
     socketCreated = False
@@ -158,7 +160,9 @@ class ScannerIp:
             con = s.connect((t_IP, port))
             with print_lock:
                 portsResults.append(port)
+                print("---------------------------------------------------")
                 print(colored("[+] Port %d is open" % (port), 'green'))
+                print("This is "+ portsDict.ports.get(str(port))+" port")
             con.close()
         except:
             pass
@@ -198,6 +202,7 @@ if choice == 1:
     socket.setdefaulttimeout(0.25)
     print_lock = threading.Lock()
     target = input('[*] Enter the host to be scanned: ')
+    portNumber = int(input('[*] Enter the number of ports you want to scan: '))
     t_IP = socket.gethostbyname(target)
     print("[Scanning Target...] "+str(t_IP))
 
@@ -211,7 +216,7 @@ if choice == 1:
         t.daemon = True
         t.start()
 
-    for worker in range(1, 1000):
+    for worker in range(1, portNumber):
         q.put(worker)
 
     q.join()
@@ -231,4 +236,4 @@ if choice==4:
     target = input('[*] Enter the host to be scanned: ')
 
     webbrowser.open_new_tab('http://192.168.1.160/DVWA/vulnerabilities/xss_r/?name=<script>alert(document.cookie)</script>#')
-print(portsResults)
+
