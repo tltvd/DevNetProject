@@ -1,14 +1,15 @@
+import json
 import socket
 import time
 import threading
+import urllib
 from termcolor import colored
 from queue import Queue
 import requests
-import os, sys
+import os
 import struct
 import binascii
 import webbrowser
-
 import portsDict
 
 
@@ -162,7 +163,7 @@ class ScannerIp:
                 portsResults.append(port)
                 print("---------------------------------------------------")
                 print(colored("[+] Port %d is open" % (port), 'green'))
-                print("This is "+ portsDict.ports.get(str(port))+" port")
+                print("This is " + portsDict.ports.get(str(port)) + " port")
             con.close()
         except:
             pass
@@ -173,7 +174,9 @@ class ScannerIp:
             ScannerIp.portscan(worker)
             q.task_done()
 
-    print('''\033[1;97m██████╗░███████╗░█████╗░██████╗░
+
+
+print('''\033[1;97m██████╗░███████╗░█████╗░██████╗░
 ██╔══██╗██╔════╝██╔══██╗██╔══██╗
 ██████╔╝█████╗░░███████║██║░░██║
 ██╔══██╗██╔══╝░░██╔══██║██║░░██║
@@ -181,59 +184,118 @@ class ScannerIp:
 ╚═╝░░╚═╝╚══════╝╚═╝░░╚═╝╚═════╝\033[0m\n''')
 
 
-print("""Welcome to our DevNet project work! Our program is focused on network analysis and troubleshooting.
-Functions of this program:
-===============================================================================================================
-1) Network scanner
-This program scans the victim to locate open ports available on a particular host.
-===============================================================================================================
-2) Checking the availability of HTTP methods
-Given Python crypt with which we can connect to the target web server and enumerate the available HTTP methods.
-===============================================================================================================
-3) Packet Analyzer
-This Python program will analyze each packet received by the host machine and print out the contents of its Ethernet, 
-IP, and TCP/UDP headers to the console. The script will differentiate the packet's protocol as either TCP or UDP 
-and print their respective headers to the console.
-===============================================================================================================
-""")
-choice = int(input('[*] Please, enter the number of the feature you want to use: '))
-portsResults = []
-if choice == 1:
-    socket.setdefaulttimeout(0.25)
-    print_lock = threading.Lock()
-    target = input('[*] Enter the host to be scanned: ')
-    portNumber = int(input('[*] Enter the number of ports you want to scan: '))
-    t_IP = socket.gethostbyname(target)
-    print("[Scanning Target...] "+str(t_IP))
+while True:
+    print("""Welcome to our DevNet project work! Our program is focused on network analysis and troubleshooting.
+    Functions of this program:
+    ===============================================================================================================
+    [1] Network scanner
+    This program scans the victim to locate open ports available on a particular host.
+    ===============================================================================================================
+    [2] Checking the availability of HTTP methods
+    Given Python crypt with which we can connect to the target web server and enumerate the available HTTP methods.
+    ===============================================================================================================
+    [3] Packet Analyzer
+    This Python program will analyze each packet received by the host machine and print out the contents of its Ethernet, 
+    IP, and TCP/UDP headers to the console. The script will differentiate the packet's protocol as either TCP or UDP 
+    and print their respective headers to the console.
+    ===============================================================================================================
+    [4] Get Info about host
+    This program will give you brief information about the host.
+    ===============================================================================================================
+    [5] Quit
+    ===============================================================================================================
+    """)
+    choice = int(input('[*] Please, enter the number of the feature you want to use: '))
+    portsResults = []
+    if choice == 1:
+        socket.setdefaulttimeout(0.25)
+        print_lock = threading.Lock()
+        target = input('[*] Enter the host to be scanned: ')
+        portNumber = int(input('[*] Enter the number of ports you want to scan: '))
+        t_IP = socket.gethostbyname(target)
+        print("[Scanning Target...] " + str(t_IP))
 
-    ip = ScannerIp(t_IP)
+        ip = ScannerIp(t_IP)
 
-    q = Queue()
-    startTime = time.time()
+        q = Queue()
+        startTime = time.time()
 
-    for x in range(100):
-        t = threading.Thread(target=ip.threader)
-        t.daemon = True
-        t.start()
+        for x in range(500):
+            t = threading.Thread(target=ip.threader)
+            t.daemon = True
+            t.start()
 
-    for worker in range(1, portNumber):
-        q.put(worker)
+        for worker in range(1, portNumber):
+            q.put(worker)
+        q.join()
 
-    q.join()
-if choice == 2:
-    target = input('[*] Enter the host to be scanned: ')
-    method_list = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'TEST']
-    for method in method_list:
-        req = requests.request(method, target)
-        print(method, req.status_code, req.reason)
-    if method == 'TRACE' and 'TRACE / HTTP/1.1' in req.text:
-        print('Cross Site Tracing(XST) is possible')
-if choice == 3:
-    packet = packetAnalyzer()
-    packet.startPacketAnalyzer()
-if choice==4:
+        vul_choice = input('[*] Would you like to see the list of vulnerabilities for these ports? [y/n]: ')
+        for port in portsResults:
+            if vul_choice == 'y':
+                webbrowser.open_new_tab('https://www.speedguide.net/port.php?port=' + str(port))
+            if vul_choice == 'n':
+                break
+            else:
+                print("Please, type correct answer [y/n]")
+        continue_choice = input('[*] Would you like to continue? [y/n]: ')
+        if continue_choice=='y':
+            continue
+        if continue_choice=='n':
+            exit()
 
-    target = input('[*] Enter the host to be scanned: ')
 
-    webbrowser.open_new_tab('http://192.168.1.160/DVWA/vulnerabilities/xss_r/?name=<script>alert(document.cookie)</script>#')
+    if choice == 2:
+        target = input('[*] Enter the host to be scanned: ')
+        target='http://'+target
+        method_list = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'TEST']
+        for method in method_list:
+            req = requests.request(method, target)
+            print(method, req.status_code, req.reason)
+        if method == 'TRACE' and 'TRACE / HTTP/1.1' in req.text:
+            print('Cross Site Tracing(XST) is possible')
+        continue_choice = input('[*] Would you like to continue? [y/n]: ')
+        if continue_choice=='y':
+            continue
+        if continue_choice=='n':
+            exit()
 
+    if choice == 3:
+        packet = packetAnalyzer()
+        packet.startPacketAnalyzer()
+    continue_choice = input('[*] Would you like to continue? [y/n]: ')
+    if continue_choice == 'y':
+        continue
+    if continue_choice == 'n':
+        exit()
+
+    if choice == 4:
+        getIP = input('[*] Enter the host to get info: ')
+        t_IP = socket.gethostbyname(getIP)
+        url = "https://ipinfo.io/" + t_IP + "/json"
+
+        try:
+            getInfo = urllib.request.urlopen(url)
+
+        except:
+            print("\n[!] - IP not found! - [!]\n")
+
+        infoList = json.load(getInfo)
+
+        print("-" * 60)
+
+        print("IP: ", infoList["ip"])
+        print("City: ", infoList["city"])
+        print("Region: ", infoList["region"])
+        print("Country: ", infoList["country"])
+        print("Hostname: ", infoList["hostname"])
+        print("timezone: ", infoList["timezone"])
+        print("org: ", infoList["org"])
+        print("-" * 60)
+        continue_choice = input('[*] Would you like to continue? [y/n]: ')
+        if continue_choice=='y':
+            continue
+        if continue_choice=='n':
+            exit()
+
+    if choice == 5:
+        break
