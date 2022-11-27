@@ -5,12 +5,15 @@ import threading
 import urllib
 from termcolor import colored
 from queue import Queue
-import requests
 import os
 import struct
 import binascii
-import webbrowser
 import portsDict
+import webbrowser
+import requests
+import sys
+import re
+from bs4 import BeautifulSoup
 
 
 class packetAnalyzer:
@@ -262,11 +265,11 @@ while True:
     if choice == 3:
         packet = packetAnalyzer()
         packet.startPacketAnalyzer()
-    continue_choice = input('[*] Would you like to continue? [y/n]: ')
-    if continue_choice == 'y':
-        continue
-    if continue_choice == 'n':
-        exit()
+        continue_choice = input('[*] Would you like to continue? [y/n]: ')
+        if continue_choice == 'y':
+            continue
+        if continue_choice == 'n':
+            exit()
 
     if choice == 4:
         getIP = input('[*] Enter the host to get info: ')
