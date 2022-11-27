@@ -32,7 +32,8 @@ class TestMain(unittest.TestCase):
 
     def test_port_connection(self):
         for port in portsResults:
-            self.assertTrue(network_connection_check(target+":"+str(port)))
+            self.assertTrue(network_connection_check(target + ":" + str(port)))
+
 
 if __name__ == "__main__":
     unittest.main()
